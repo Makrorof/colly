@@ -25,6 +25,7 @@ import (
 	"hash/fnv"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -156,6 +157,8 @@ type ScrapedCallback func(*Response)
 
 // ProxyFunc is a type alias for proxy setter functions.
 type ProxyFunc func(*http.Request) (*url.URL, error)
+
+type DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
 
 // AlreadyVisitedError is the error type for already visited URLs.
 //
@@ -1019,6 +1022,27 @@ func (c *Collector) SetProxy(proxyURL string) error {
 	return nil
 }
 
+//"ip", "x.x.x.x"
+func (c *Collector) SetLocalAddr(network string, address string) error {
+	localAddr, err := net.ResolveIPAddr(network, address)
+	if err != nil {
+		return err
+	}
+
+	localTCPAddr := net.TCPAddr{
+		IP: localAddr.IP,
+	}
+
+	c.SetDialContext((&net.Dialer{
+		LocalAddr: &localTCPAddr,
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+		DualStack: true,
+	}).DialContext)
+
+	return nil
+}
+
 // SetProxyFunc sets a custom proxy setter/switcher function.
 // See built-in ProxyFuncs for more details.
 // This method overrides the previously used http.Transport
@@ -1035,6 +1059,19 @@ func (c *Collector) SetProxyFunc(p ProxyFunc) {
 		c.backend.Client.Transport = &http.Transport{
 			Proxy:             p,
 			DisableKeepAlives: true,
+		}
+	}
+}
+
+func (c *Collector) SetDialContext(dial DialContext) {
+	t, ok := c.backend.Client.Transport.(*http.Transport)
+	if c.backend.Client.Transport != nil && ok {
+		t.DisableKeepAlives = true
+		t.DialContext = dial
+	} else {
+		c.backend.Client.Transport = &http.Transport{
+			DisableKeepAlives: true,
+			DialContext:       dial,
 		}
 	}
 }
