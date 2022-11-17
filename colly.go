@@ -887,7 +887,7 @@ func (c *Collector) OnResponse(f ResponseCallback) {
 }
 
 // OnResponse registers a function. Function will be executed on every response
-func (c *Collector) OnResponseClear(f ResponseCallback) {
+func (c *Collector) OnResponseClear() {
 	c.lock.Lock()
 	c.responseCallbacks = make([]ResponseCallback, 0, 4)
 	c.lock.Unlock()
