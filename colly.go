@@ -886,6 +886,13 @@ func (c *Collector) OnResponse(f ResponseCallback) {
 	c.lock.Unlock()
 }
 
+// OnResponse registers a function. Function will be executed on every response
+func (c *Collector) OnResponseClear(f ResponseCallback) {
+	c.lock.Lock()
+	c.responseCallbacks = make([]ResponseCallback, 0, 4)
+	c.lock.Unlock()
+}
+
 // OnHTML registers a function. Function will be executed on every HTML
 // element matched by the GoQuery Selector parameter.
 // GoQuery Selector is a selector used by https://github.com/PuerkitoBio/goquery
